@@ -1,20 +1,20 @@
 #pragma once
 
-BEGIN_FLASH_STRING_TABLE_CLASS(SystemStates)
+BEGIN_FLASH_STRING_TABLE_CLASS(MainMachineStates)
 ADD_FLASH_STRING("error")
 ADD_FLASH_STRING("startup")
 ADD_FLASH_STRING("transitioning")
 ADD_FLASH_STRING("retracted")
 ADD_FLASH_STRING("deployed")
-ADD_FLASH_STRING("deploy_door_opening")
-ADD_FLASH_STRING("deploy_door_closing")
-ADD_FLASH_STRING("retract_door_opening")
-ADD_FLASH_STRING("retract_door_closing")
+ADD_FLASH_STRING("deploy_opening")
+ADD_FLASH_STRING("deploy_closing")
+ADD_FLASH_STRING("retract_opening")
+ADD_FLASH_STRING("retract_closing")
 ADD_FLASH_STRING("slider_deploying")
 ADD_FLASH_STRING("slider_retracting")
 END_FLASH_STRING_TABLE()
 
-BEGIN_FLASH_STRING_TABLE_CLASS(SystemTriggers)
+BEGIN_FLASH_STRING_TABLE_CLASS(MainMachineTriggers)
 ADD_FLASH_STRING("None")
 ADD_FLASH_STRING("Retracted")
 ADD_FLASH_STRING("Deployed")
@@ -38,7 +38,7 @@ const char _f_logStatusFmt[] PROGMEM = "Door: %s | Slider: %s, Fwd: %dmm, Rwd: %
 // make static so it's not dynamically allocated
 static char _logStatus[255];
 
-class System : public Machine {
+class MainMachine : public Machine {
  public:
   enum States
   {
@@ -47,10 +47,10 @@ class System : public Machine {
     transitioning,
     retracted,
     deployed,
-    deploy_door_opening,
-    deploy_door_closing,
-    retract_door_opening,
-    retract_door_closing,
+    deploy_opening,
+    deploy_closing,
+    retract_opening,
+    retract_closing,
     slider_deploying,
     slider_retracting,
   };
@@ -77,85 +77,25 @@ class System : public Machine {
     SliderError
   };
 
-  //System();
-  //System() : api(), slider(), door(), _status(Triggers::Error), _trigger(Triggers::None) {}
-
-  // void on_enter(StateType  _state);
-  // void on_state(StateType  _state);
-  // void on_exit(StateType  _state);
-
-  /**
-   *
-   * @brief Initiazlie object. Called at system startup.
-   *
-   * @return true if setup worked
-   * @return false if setup failed
-   */
-  bool begin();
-
-  /**
-   * @brief Runs the sub-system's _state machine. Called from the holding
-   * object's `runStateMachines()`; the top level machine (`System`)'s
-   * `runMachine` is called from `loop()`.
-   *
-   */
-  virtual void runStateMachines();
-
-  /**
-   * @brief Set the Trigger objectSets the _trigger of the next _state to transition to. 
-   * The _trigger will happen async. Triggers::None means stay in current _state.
-   * 
-   * @param _trigger 
-   */
-  virtual void setTrigger(TriggerType _trigger);
-
-  /**
-   * @brief Set the Current State object - Used for diagnostics; called from
-   * on_enter of each _state in statemachine
-   *
-   * @param _state
-   */
-  virtual void setCurrentState(StateType _state);
-
-  /**
-   * @brief Do machine work while in a _state (to be called from `on_state` handlers).
-   * 
-   * @param currentState - passed as a convenience so on_state doesn't have to call getState().
-   * @return Trigger - a _trigger for a _state transition. The `on_state` will then use this to
-   * initate a _state transition (by calling the appropriate `setTrigger()`)
-   */
-  virtual TriggerType process(StateType currentState);
-
-  /**
-   * @brief Returns current (cached) _state of the machine
-   *
-   * @return States
-   */
-  //virtual Beaker::States getState();
-
-  /**
-   * @brief `Printable::printTo` - prints the current State & Trigger
-   * 'State(Trigger)'
-   *
-   * @param p
-   * @return size_t
-   */
-  virtual size_t printTo(Print& p) const;
+  /***************** BEGIN From Machine() ****************/
+  virtual bool begin();
+  virtual void runSubMachines();
+  //virtual void setTrigger(TriggerType trigger);
+  //virtual void stateChanged(StateType state);
+  virtual TriggerType process(StateType stateCalling = Machine::States::error);
+  //virtual size_t printTo(Print& p) const;
+  /***************** END From Machine() ****************/
 
   //// Added APIS
 
   /**
- * @brief For synchronous commands like 'status'
- * 
- */
+   * @brief For synchronous commands like 'status'
+   * 
+   */
   void runCommand();
 
   // this flag tells us the system came up alive
   bool systemFunctional = true;
-
-  // Api api;
-  // Slider slider;
-  // Door door;
 
   template <class T, typename... Args>
   /**
@@ -167,7 +107,7 @@ class System : public Machine {
   void logStatus(T msg, Args... args) {
     _logStatus[0] = 0;
     if (!systemFunctional) {
-      Log.errorln(F("System is not functional"));
+      Log.errorln(F("MainMachine is not functional"));
     }
     Log.noticeln(msg, args...);
 
@@ -196,16 +136,22 @@ class System : public Machine {
   // ---------- Singleton support
   // https://stackoverflow.com/a/1008289/297526
  public:
-  // Getting a single instance object
-  static System& getInstance() {
-    static System instance;  // Guaranteed to be destroyed.
-                             // Instantiated on first use.
+  /**
+   * @brief Returns the single instance object
+   *
+   */
+  static MainMachine& getInstance() {
+    static MainMachine instance;  // Guaranteed to be destroyed.
+                                  // Instantiated on first use.
     return instance;
   }
 
  private:
   // Prohibiting External Constructions
-  System() {}
+  MainMachine() {
+    _stateStrings = _progmem_MainMachineStates;
+    _triggerStrings = _progmem_MainMachineTriggers;
+  }
 
   // C++ 11
   // =======
@@ -213,8 +159,8 @@ class System : public Machine {
   // we don't want.
  public:
   // This breaks printTo
-  //System(System const&) = delete;
-  void operator=(System const&) = delete;
+  //MainMachine(MainMachine const&) = delete;
+  void operator=(MainMachine const&) = delete;
 };
 
-//extern System _system;
+//extern MainMachine _system;

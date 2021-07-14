@@ -1,90 +1,178 @@
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <assert.h>
-#include <FlashStringTable.h>
-#include <Fsm.h>
-#include <FlashStringTable.h>
 
 #include "Machine.h"
 
-Machine _machine;
+void Machine::allocateFsm(StateType lastState, TriggerType lastTrigger) {
+  Log.traceln(F("Machine::allocateFsm(%d, %d)"), lastState, lastTrigger);
+  assert(_rgpStates == nullptr);
 
-Machine::Machine()
-    : _stateStrings(_progmem_MachineStates),
-      _triggerStrings(_progmem_MachineTriggers),
-      _state(States::error),
-      _trigger(Triggers::None) {
-  Log.traceln("Machine::Machine()");
+  _numStates = lastState + 1;
+  _numTriggers = lastTrigger + 1;
 
-  // Don't do anything in here because these objects are static
-  // and thus constructors are called before Serial or other
-  // stuff is available, making debugging hard. Use begin() instead.
+  assert(_numStates == _stateStrings.getNumStrings());
+  assert(_numTriggers == _triggerStrings.getNumStrings());
+
+  // BUGBUG: This is actually allocating _numStates State objects, not 
+  // _numStates State* pointers.
+  _rgpStates = (State **)new State[_numStates];
+};
+
+void Machine::setStartState(StateType state) {
+  Log.traceln(F("Machine::setStartState(%d)"), state);
+  assert(_rgpStates != nullptr);
+  assert(_pFsm == nullptr);
+  assert(state < _numStates);
+
+  for (StateType i = 0; i < _numStates; i++) {
+    assert(_rgpStates[i] != nullptr);
+  }
+  _pFsm = new Fsm(_rgpStates[state]);
+};
+
+void Machine::trigger(TriggerType trigger, bool immediate) {
+  //Log.traceln(F("Machine::trigger(%d, %d)"), trigger, immediate);
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
+  assert(trigger < _numTriggers);
+  _pFsm->trigger(trigger, immediate);
+}
+
+bool Machine::isTriggerValid(TriggerType trigger) {
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
+  if (trigger == Triggers::None){
+    return true;
+  }
+  return _pFsm->is_valid_event(trigger);
+}
+
+void Machine::runMachine() {
+  //Log.traceln(F("Machine::runMachine()"));
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
+  _pFsm->run_machine();
+}
+
+void Machine::addTransition(StateType stateFrom, StateType stateTo, TriggerType trigger, void (*on_transition)()) {
+  //Log.traceln(F("Machine::addTransition(%d, %d, %d)"), stateFrom, stateTo, trigger);
+  assert(_pFsm != nullptr);
+  assert(_rgpStates != nullptr);
+  assert(stateFrom < _numStates);
+  assert(stateTo < _numStates);
+  assert(trigger < _numTriggers);
+  assert(_rgpStates[stateFrom] != nullptr);
+  assert(_rgpStates[stateTo] != nullptr);
+  _pFsm->add_transition(_rgpStates[stateFrom], _rgpStates[stateTo], trigger, on_transition);
+}
+
+void Machine::addTimedTransition(StateType stateFrom, StateType stateTo, unsigned long interval, void (*on_transition)()) {
+  //Log.traceln(F("Machine::addTimedTransition(%d, %d, %d)"), stateFrom, stateTo, interval);
+  assert(_pFsm != nullptr);
+  assert(_rgpStates != nullptr);
+  assert(stateFrom < _numStates);
+  assert(stateTo < _numStates);
+  assert(_rgpStates[stateFrom] != nullptr);
+  assert(_rgpStates[stateTo] != nullptr);
+  _pFsm->add_timed_transition(_rgpStates[stateFrom], _rgpStates[stateTo], interval, on_transition);
+}
+
+StateType Machine::getCurrentState() const {
+  if (_pFsm == nullptr) {
+    return States::error;
+  }
+  assert(_rgpStates != nullptr);
+
+  StateType state;
+  State *pCurState = _pFsm->get_current_state();
+  if (pCurState == nullptr) {
+    state = States::error;
+  } else {
+    for (state = 0; state < _numStates; state++) {
+      if (_rgpStates[state] == pCurState) {
+        break;
+      }
+    }
+  }
+  assert(state < _numStates);
+  return state;
 }
 
 bool Machine::begin() {
-  Log.traceln("Machine::begin()");
+  //Log.traceln(F("Machine::begin()"));
 
   assert(States::error + 1 == _stateStrings.getNumStrings());
 
   _rgpStates = nullptr;
   _pFsm = nullptr;
 
-  // _rgpStates = (State **)new State[(Machine::States::error + 1)];
-  // _rgpStates[Machine::States::error] = new State(
-  //     []() {
-  //       Log.traceln("on_enter");
-  //       _machine.setCurrentState(Machine::States::error);
-  //     },
-  //     []() {
-  //       Log.traceln("on_state");
-  //     },
-  //     []() {
-  //       Log.traceln("on_exit");
-  //     });
+  // this code block illustrates a typical `begin()` implementation
+  // allocateFsm(States::error, Triggers::None);
 
-  // _pFsm = new Fsm(_rgpStates[_state]);
-  // _pFsm->add_transition(_rgpStates[Machine::States::error],
-  //     _rgpStates[Machine::States::error], Machine::Triggers::None, nullptr);
+  _rgpStates[error] = new State(
+      []() {
+        TRACE_STATE_FN(Machine, on_enter, true);
+      },
+      []() {
+        TRACE_STATE_STATE_FN(Machine, false);
+      },
+      []() {
+        TRACE_STATE_FN(Machine, on_exit, true);
+      });
+
+  setStartState(error);
 
   return true;
 }
 
-void Machine::runStateMachines() {
-  // trigger() ends up callilng old->on_exit, new->on_enter
+void Machine::runSubMachines() {
+  //Log.traceln(F("Machine::runSubMachines()"));
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
 
-  // We should never run
-  assert (_rgpStates == nullptr);
-  assert (_pFsm == nullptr);
-
-  _pFsm->trigger(_trigger);
-
-  // Reset the trigger
-  setTrigger(None);
+  // Trigger an outstanding trigger if there is one
+  if (_trigger != Machine::Triggers::None) {
+    // trigger() ends up callilng old->on_exit, new->on_enter
+    //Log.traceln(F("Machine::runSubMachines - trigger(%S)"), _triggerStrings.getString(_trigger));
+    trigger(_trigger, true);
+    // Reset the trigger
+    //Log.traceln(F("Machine::runSubMachines - trigger(%S) completed, resetting trigger and exiting..."), _triggerStrings.getString(_trigger));
+    setTrigger(Machine::Triggers::None);
+    return;
+  }
 
   // runs the current state's on_state then checks for
   // timed transitions
-  _pFsm->run_machine();
+  runMachine();
 
   // the current state's on_state has returned
   // returning from here puts us back in loop()...
 }
 
 void Machine::setTrigger(TriggerType trigger) {
-  Log.traceln(F("Machine::setTrigger(%S)"), _triggerStrings.getString(trigger));
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
+  //Log.traceln(F("Machine::setTrigger(%S)"), _triggerStrings.getString(trigger));
   // Trigger a state transition (asynchronously)
   // TODO: Redraw dispay?
 
-  trigger = trigger;
+  _trigger = trigger;
 }
 
-void Machine::setCurrentState(StateType state) {
+void Machine::stateChanged(StateType state) {
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
   // For diagnostics
 
   // TODO: Redraw dispay
 }
 
-TriggerType Machine::process(StateType currentState) {
-  Log.traceln(F("Machine::process(%S)"), _stateStrings.getString(currentState));
+TriggerType Machine::process(StateType stateCalling) {
+  assert(_rgpStates != nullptr);
+  assert(_pFsm != nullptr);
+
+  //Log.traceln(F("Machine::process(%S)"), _stateStrings.getString(stateCalling));
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set trigger or call setTrigger(); the calling on_state will do so
   TriggerType trigger = Triggers::None;
@@ -93,5 +181,5 @@ TriggerType Machine::process(StateType currentState) {
 }
 
 size_t Machine::printTo(Print &p) const {
-  return p.print(_stateStrings.getString((int)_state));
+  return p.print(_stateStrings.getString(getCurrentState()));
 };
