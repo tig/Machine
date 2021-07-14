@@ -37,14 +37,9 @@ void setup() {
   Machine &machine = Machine::getInstance();
   machine.begin();
   Log.traceln("Machine printTo: %p ", machine);
-  Log.traceln("Machine State printTo: %p ", machine._stateStrings);
-  for (uint16_t i = 0; i < machine._stateStrings.getNumStrings(); i++) {
-    Log.trace("%d = %S, ", i, machine._stateStrings.getString(i));
-  }
-  Log.traceln(F("\n"));
-  Log.traceln("Machine Trigger printTo: %p", machine._triggerStrings);
-  for (uint16_t i = 0; i < machine._triggerStrings.getNumStrings(); i++) {
-    Log.trace("%d = %S, ", i, machine._triggerStrings.getString(i));
+  Log.traceln("Machine State printTo: %p ", machine.getCurrentState());
+  for (uint16_t i = 0; i < machine.getNumStates(); i++) {
+    Log.trace("%d = %S, ", i, machine.getState(i)->name);
   }
   Log.traceln(F("\n"));
 
@@ -52,9 +47,9 @@ void setup() {
   Beaker& beaker = Beaker::getInstance();
   beaker.begin();
   Log.traceln("Beaker printTo: %p ", beaker);
-  Log.traceln("Beaker State printTo: %p ", beaker._stateStrings);
-  for (uint16_t i = 0; i < beaker._stateStrings.getNumStrings(); i++) {
-    Log.trace("%d = %S, ", i, beaker._stateStrings.getString(i));
+  Log.traceln("Beaker State printTo: %p ", beaker.getCurrentState());
+  for (uint16_t i = 0; i < beaker.getNumStates(); i++) {
+    Log.trace("%d = %S, ", i, beaker.getState(i)->name);
   }
   Log.traceln(F("\n"));
   Log.traceln("Beaker Trigger printTo: %p", beaker._triggerStrings);
@@ -69,9 +64,9 @@ void setup() {
   system.begin();
 
   Log.traceln("MainMachine printTo: %p ", system);
-  Log.traceln("MainMachine State printTo: %p ", system._stateStrings);
-  for (uint16_t i = 0; i < system._stateStrings.getNumStrings(); i++) {
-    Log.trace("%d = %S, ", i, system._stateStrings.getString(i));
+  Log.traceln("MainMachine State printTo: %p ", system.getCurrentState());
+  for (uint16_t i = 0; i < system.getNumStates(); i++) {
+    Log.trace("%d = %S, ", i, system.getState(i)->name);
   }
   Log.traceln(F("\n"));
   Log.traceln("MainMachine Trigger printTo: %p", system._triggerStrings);

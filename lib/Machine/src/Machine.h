@@ -3,9 +3,9 @@
 #include <FlashStringTable.h>
 #include <Fsm.h>
 
-BEGIN_FLASH_STRING_TABLE_CLASS(MachineStates)
-ADD_FLASH_STRING("error")
-END_FLASH_STRING_TABLE()
+// BEGIN_FLASH_STRING_TABLE_CLASS(MachineStates)
+// ADD_FLASH_STRING("error")
+// END_FLASH_STRING_TABLE()
 
 BEGIN_FLASH_STRING_TABLE_CLASS(MachineTriggers)
 ADD_FLASH_STRING("None")
@@ -23,11 +23,11 @@ END_FLASH_STRING_TABLE()
  * @param fn on_enter, on_state, or on_exit
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_FN(machine, fn, trace)                                                                  \
-  machine& machine##_inst = machine::getInstance();                                                         \
-  StateType machine##_state = machine##_inst.getCurrentState();                                             \
-  if (trace) {                                                                                              \
-    Log.traceln(F(#machine " state: %S  - " #fn), machine##_inst._stateStrings.getString(machine##_state)); \
+#define TRACE_STATE_FN(machine, fn, trace)                                \
+  machine& machine##_inst = machine::getInstance();                       \
+  MachineState* this##_state = machine##_inst.getCurrentState();       \
+  if (trace) {                                                            \
+    Log.traceln(F(#machine " state: %S  - " #fn), this##_state->name); \
   }
 
 /**
@@ -41,11 +41,11 @@ END_FLASH_STRING_TABLE()
  * @param machine classname of the `Machine` subclass.
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_ENTER_FN(machine, trace)                                                                    \
-  machine& machine##_inst = machine::getInstance();                                                             \
-  StateType machine##_state = machine##_inst.getCurrentState();                                                 \
-  if (trace) {                                                                                                  \
-    Log.traceln(F(#machine " state: %S  - on_enter"), machine##_inst._stateStrings.getString(machine##_state)); \
+#define TRACE_STATE_ENTER_FN(machine, trace)                                  \
+  machine& machine##_inst = machine::getInstance();                           \
+  MachineState* this##_state = machine##_inst.getCurrentState();           \
+  if (trace) {                                                                \
+    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name); \
   }
 
 /**
@@ -60,22 +60,24 @@ END_FLASH_STRING_TABLE()
  * @param machine classname of the `Machine` subclass.
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_STATE_FN(machine, trace)                                                                    \
-  machine& machine##_inst = machine::getInstance();                                                             \
-  StateType machine##_state = machine##_inst.getCurrentState();                                                 \
-  if (trace) {                                                                                                  \
-    Log.traceln(F(#machine " state: %S  - on_enter"), machine##_inst._stateStrings.getString(machine##_state)); \
-  }                                                                                                             \
-  TriggerType machine##_trigger = machine##_inst.process();                                                     \
-  if (!machine##_inst.isTriggerValid(machine##_trigger)) {                                                      \
-    Log.traceln(F(#machine " state: %S  - on_enter"), machine##_inst._stateStrings.getString(machine##_state)); \
-    Log.traceln(F(" invalid trigger: %S"), machine##_inst._triggerStrings.getString(machine##_trigger));        \
+#define TRACE_STATE_STATE_FN(machine, trace)                                                             \
+  machine& machine##_inst = machine::getInstance();                                                      \
+  MachineState* this##_state = machine##_inst.getCurrentState();                                      \
+  if (trace) {                                                                                           \
+    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name);                            \
+  }                                                                                                      \
+  TriggerType this##_trigger = machine##_inst.process();                                              \
+  if (!machine##_inst.isTriggerValid(this##_trigger)) {                                               \
+    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name);                            \
+    Log.traceln(F(" invalid trigger: %S"), machine##_inst._triggerStrings.getString(this##_trigger)); \
   }
+
+#define DEFINE_STATE(state) defineState(&state, F("" #state "")
 
 // Because c/c++ does not support polymorhpic enums we can't really pass our nice
 // enums around strongly typed. So we just an int. And silly defines to make the code
 // more readable
-using StateType = uint16_t;
+// using StateType = uint16_t;
 using TriggerType = uint16_t;
 
 // template<typename T>
@@ -89,30 +91,34 @@ using TriggerType = uint16_t;
 // class StateType :public EnumWrapper<uint16_t> {};
 // class TriggerType :public EnumWrapper<uint16_t> {};
 
-// class MachineState : State, public Printable {
-//  public:
-//   MachineState(uint16_t index, const __FlashStringHelper* name,
-//       void (*on_enter)(), void (*on_state)(), void (*on_exit)()) : MachineState() {
-//     index = index;
-//     name = name;
-//     on_enter = on_enter;
-//     on_state = on_state;
-//     on_exit = on_exit;
-//   };
+class MachineState : public State, public Printable {
+ public:
+  MachineState(uint16_t index, const __FlashStringHelper* name,
+      void (*on_enter)(), void (*on_state)(), void (*on_exit)()) : MachineState() {
+    index = index;
+    name = name;
+    on_enter = on_enter;
+    on_state = on_state;
+    on_exit = on_exit;
+  };
+  // MachineState(const __FlashStringHelper* name){
+  //   name = name;
+  // };
+  MachineState(){};
 
-//   MachineState(){};
+  uint16_t index = 0;
+  const __FlashStringHelper* name = nullptr;
 
-//   const uint16_t index = 0;
-//   const __FlashStringHelper* name = nullptr;
-
-//   /**
-//    * @brief `Printable::printTo` - prints the current State
-//    *
-//    * @param p
-//    * @return size_t
-//    */
-//   virtual size_t printTo(Print& p) const;
-// };
+  /**
+   * @brief `Printable::printTo` - prints the current State
+   *
+   * @param p
+   * @return size_t
+   */
+  virtual size_t printTo(Print& p) const {
+    return p.print(name);
+  };
+};
 
 /**
  * @brief Abstract (pure v) base class for subystems that are run by a state machine.
@@ -120,13 +126,10 @@ using TriggerType = uint16_t;
  */
 class Machine : public Printable {
  public:
-  /**
-   * @brief The states the Machine's FSM can be in. Must have the same
-   * number of items as _stateStrings[]
-   * 
+  /** 
+   * States
    */
-  enum States
-  { error };
+  MachineState error;
 
   /**
    * @brief The events that can trigger the Machine FSM to transition to another state.
@@ -140,40 +143,20 @@ class Machine : public Printable {
    * @brief Flash-memory based strings for the States
    * 
    */
-  StringTable _stateStrings = _progmem_MachineStates;
-
-  /**
-   * @brief Flash-memory based strings for the States
-   * 
-   */
   StringTable _triggerStrings = _progmem_MachineTriggers;
 
   /**************** BEGIN Fsm Wrappers *****/
 
-  // MachineState** _rgpMachineStates;
-
-  // void addMachineState(const __FlashStringHelper* name,
-  //     void (*on_enter)(),
-  //     void (*on_state)(),
-  //     void (*on_exit)()) {
-  //   MachineState* pms = new MachineState(_numStates, name, on_enter, on_state, on_exit);
-  //   _rgpMachineStates[_numStates] = pms;
-  //   _numStates++;
-  // }
-
-  /**
-   * @brief Allocates the state machine implementation. Call from the end of
-   * implementaitons of `begin()` before using `_rgpStates`
-   *
-   */
-  void allocateFsm(StateType lastState, TriggerType lastTrigger);
-
+  MachineState* defineState(MachineState* state, const __FlashStringHelper* name,
+      void (*on_enter)(),
+      void (*on_state)(),
+      void (*on_exit)());
   /**
    * @brief Allocates the state machine implementation. Call from the end of 
    * implementaitons of `begin()` before using `_rgpStates`
    * 
    */
-  void setStartState(StateType state);
+  void setStartState(MachineState* state);
 
   /**
    * trigger transition with the event 
@@ -204,7 +187,7 @@ class Machine : public Printable {
    * @param trigger 
    * @param on_transition 
    */
-  void addTransition(StateType stateFrom, StateType stateTo, TriggerType trigger, void (*on_transition)() = nullptr);
+  void addTransition(MachineState* stateFrom, MachineState* stateTo, TriggerType trigger, void (*on_transition)() = nullptr);
 
   /**
    * @brief Adds a timed transition
@@ -214,7 +197,7 @@ class Machine : public Printable {
    * @param interval 
    * @param on_transition 
    */
-  void addTimedTransition(StateType stateFrom, StateType stateTo, unsigned long interval, void (*on_transition)() = nullptr);
+  void addTimedTransition(MachineState* stateFrom, MachineState* stateTo, unsigned long interval, void (*on_transition)() = nullptr);
 
   // /**
   //  * looks for the current state's timed transitions to the target state and resets the timer
@@ -226,7 +209,24 @@ class Machine : public Printable {
    * returns current state (helpful if the same handler is used to drive many similar states)
    * @return index of current state
    */
-  StateType getCurrentState() const;
+  MachineState* getState(uint16_t i) { return _rgpMachineStates[i]; }
+
+  MachineState* getState(const char* name) {
+    for (uint16_t i = 0; i < _numStates; i++) {
+      if (0 == strcmp_P(name, (const char*)(_rgpMachineStates[i]->name))) {
+        return _rgpMachineStates[i];
+      }
+    }
+    return nullptr;
+  }
+
+  uint16_t getNumStates() { return _numStates; };
+
+  /**
+   * returns current state (helpful if the same handler is used to drive many similar states)
+   * @return index of current state
+   */
+  MachineState* getCurrentState() const;
 
   /**************** END Fsm Wrappers *****/
 
@@ -263,7 +263,7 @@ class Machine : public Printable {
    *
    * @param state
    */
-  virtual void stateChanged(StateType state);
+  virtual void stateChanged(MachineState* pstate);
 
   /**
    * @brief Do machine work while in a state (to be called from `on_state` handlers).
@@ -272,7 +272,7 @@ class Machine : public Printable {
    * @return Trigger - a trigger for a state transition. The `on_state` will then use this to
    * initate a state transition (by calling the appropriate `setTrigger()`)
    */
-  virtual TriggerType process(StateType stateCalling = Machine::States::error);
+  virtual TriggerType process(MachineState* stateCalling = nullptr);
 
   /**
    * @brief `Printable::printTo` - prints the current State & Trigger
@@ -289,18 +289,18 @@ class Machine : public Printable {
    */
   TriggerType _trigger = 0;
 
-  /**
-   * @brief array of pointers to State objects
-   * 
-   */
-  State** _rgpStates = nullptr;
-
  private:
-  // /**
-  //  * @brief Current state of the machine
-  //  *
-  //  */
-  // StateType _state = 0;
+  /**
+   * @brief Dynamically allocated array of pointers to MachineStates
+   *
+   */
+  MachineState** _rgpMachineStates = nullptr;
+
+  /**
+   * @brief Current state of the machine
+   *
+   */
+  MachineState* _currentState = nullptr;
 
   /**
    * @brief pointer to arduino-fsm `Fsm` instance
@@ -309,7 +309,7 @@ class Machine : public Printable {
   Fsm* _pFsm = nullptr;
 
  private:
-  uint16_t _numStates = States::error + 1;
+  uint16_t _numStates = 0;
   uint16_t _numTriggers = Triggers::None + 1;
 
   // =======================================================

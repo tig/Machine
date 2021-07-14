@@ -1,19 +1,5 @@
 #pragma once
 
-BEGIN_FLASH_STRING_TABLE_CLASS(MainMachineStates)
-ADD_FLASH_STRING("error")
-ADD_FLASH_STRING("startup")
-ADD_FLASH_STRING("transitioning")
-ADD_FLASH_STRING("retracted")
-ADD_FLASH_STRING("deployed")
-ADD_FLASH_STRING("deploy_opening")
-ADD_FLASH_STRING("deploy_closing")
-ADD_FLASH_STRING("retract_opening")
-ADD_FLASH_STRING("retract_closing")
-ADD_FLASH_STRING("slider_deploying")
-ADD_FLASH_STRING("slider_retracting")
-END_FLASH_STRING_TABLE()
-
 BEGIN_FLASH_STRING_TABLE_CLASS(MainMachineTriggers)
 ADD_FLASH_STRING("None")
 ADD_FLASH_STRING("Retracted")
@@ -39,22 +25,10 @@ const char _f_logStatusFmt[] PROGMEM = "Door: %s | Slider: %s, Fwd: %dmm, Rwd: %
 static char _logStatus[255];
 
 class MainMachine : public Machine {
- public:
-  enum States
-  {
-    error,
-    startup,
-    transitioning,
-    retracted,
-    deployed,
-    deploy_opening,
-    deploy_closing,
-    retract_opening,
-    retract_closing,
-    slider_deploying,
-    slider_retracting,
-  };
+  MachineState error;
+  MachineState startup;
 
+ public:
   enum Triggers
   {
     None,
@@ -81,8 +55,8 @@ class MainMachine : public Machine {
   virtual bool begin();
   virtual void runSubMachines();
   //virtual void setTrigger(TriggerType trigger);
-  //virtual void stateChanged(StateType state);
-  virtual TriggerType process(StateType stateCalling = Machine::States::error);
+  //virtual void stateChanged(MachineState* state);
+  virtual TriggerType process(MachineState* stateCalling = nullptr);
   //virtual size_t printTo(Print& p) const;
   /***************** END From Machine() ****************/
 
@@ -149,10 +123,10 @@ class MainMachine : public Machine {
  private:
   // Prohibiting External Constructions
   MainMachine() {
-    _stateStrings = _progmem_MainMachineStates;
+    
     _triggerStrings = _progmem_MainMachineTriggers;
   }
-
+  
   // C++ 11
   // =======
   // We can use the better technique of deleting the methods

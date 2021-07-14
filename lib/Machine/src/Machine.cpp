@@ -4,45 +4,46 @@
 
 #include "Machine.h"
 
-void Machine::allocateFsm(StateType lastState, TriggerType lastTrigger) {
-  Log.traceln(F("Machine::allocateFsm(%d, %d)"), lastState, lastTrigger);
-  assert(_rgpStates == nullptr);
+MachineState* Machine::defineState(MachineState* pms, const __FlashStringHelper* name,
+    void (*on_enter)(),
+    void (*on_state)(),
+    void (*on_exit)()) {
+  //MachineState* pms = new MachineState(_numStates, name, on_enter, on_state, on_exit);
+  pms->index = _numStates;
+  pms->name = name;
+  pms->on_enter = on_enter;
+  pms->on_state = on_state;
+  pms->on_exit = on_exit;
+  _rgpMachineStates = (MachineState**)realloc(_rgpMachineStates, sizeof(MachineState*) * (_numStates + 1));
+  _rgpMachineStates[_numStates] = pms;
+  _numStates++;
+  return pms;
+}
 
-  _numStates = lastState + 1;
-  _numTriggers = lastTrigger + 1;
-
-  assert(_numStates == _stateStrings.getNumStrings());
-  assert(_numTriggers == _triggerStrings.getNumStrings());
-
-  // BUGBUG: This is actually allocating _numStates State objects, not 
-  // _numStates State* pointers.
-  _rgpStates = (State **)new State[_numStates];
-};
-
-void Machine::setStartState(StateType state) {
-  Log.traceln(F("Machine::setStartState(%d)"), state);
-  assert(_rgpStates != nullptr);
+void Machine::setStartState(MachineState* state) {
+  Log.traceln(F("Machine::setStartState(%p)"), state);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm == nullptr);
-  assert(state < _numStates);
+  assert(state->index < _numStates);
 
-  for (StateType i = 0; i < _numStates; i++) {
-    assert(_rgpStates[i] != nullptr);
+  for (uint16_t i = 0; i < _numStates; i++) {
+    assert(_rgpMachineStates[i] != nullptr);
   }
-  _pFsm = new Fsm(_rgpStates[state]);
+  _pFsm = new Fsm(state);
 };
 
 void Machine::trigger(TriggerType trigger, bool immediate) {
   //Log.traceln(F("Machine::trigger(%d, %d)"), trigger, immediate);
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-  assert(trigger < _numTriggers);
+//  assert(trigger < _numTriggers);
   _pFsm->trigger(trigger, immediate);
 }
 
 bool Machine::isTriggerValid(TriggerType trigger) {
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-  if (trigger == Triggers::None){
+  if (trigger == Triggers::None) {
     return true;
   }
   return _pFsm->is_valid_event(trigger);
@@ -50,67 +51,66 @@ bool Machine::isTriggerValid(TriggerType trigger) {
 
 void Machine::runMachine() {
   //Log.traceln(F("Machine::runMachine()"));
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
   _pFsm->run_machine();
 }
 
-void Machine::addTransition(StateType stateFrom, StateType stateTo, TriggerType trigger, void (*on_transition)()) {
-  //Log.traceln(F("Machine::addTransition(%d, %d, %d)"), stateFrom, stateTo, trigger);
+void Machine::addTransition(MachineState* stateFrom, MachineState* stateTo, TriggerType trigger, void (*on_transition)()) {
+  //Log.traceln(F("Machine::addTransition(%p, %p, %d)"), stateFrom, stateTo, trigger);
   assert(_pFsm != nullptr);
-  assert(_rgpStates != nullptr);
-  assert(stateFrom < _numStates);
-  assert(stateTo < _numStates);
-  assert(trigger < _numTriggers);
-  assert(_rgpStates[stateFrom] != nullptr);
-  assert(_rgpStates[stateTo] != nullptr);
-  _pFsm->add_transition(_rgpStates[stateFrom], _rgpStates[stateTo], trigger, on_transition);
+  assert(_rgpMachineStates != nullptr);
+  assert(stateFrom != nullptr);
+  assert(stateTo != nullptr);
+  assert(stateFrom->index < _numStates);
+  assert(stateTo->index < _numStates);
+  //assert(trigger < _numTriggers);
+
+  _pFsm->add_transition(stateFrom, stateTo, trigger, on_transition);
 }
 
-void Machine::addTimedTransition(StateType stateFrom, StateType stateTo, unsigned long interval, void (*on_transition)()) {
-  //Log.traceln(F("Machine::addTimedTransition(%d, %d, %d)"), stateFrom, stateTo, interval);
+void Machine::addTimedTransition(MachineState* stateFrom, MachineState* stateTo, unsigned long interval, void (*on_transition)()) {
+  //Log.traceln(F("Machine::addTimedTransition(%p, %p, %d)"), stateFrom, stateTo, interval);
   assert(_pFsm != nullptr);
-  assert(_rgpStates != nullptr);
-  assert(stateFrom < _numStates);
-  assert(stateTo < _numStates);
-  assert(_rgpStates[stateFrom] != nullptr);
-  assert(_rgpStates[stateTo] != nullptr);
-  _pFsm->add_timed_transition(_rgpStates[stateFrom], _rgpStates[stateTo], interval, on_transition);
+  assert(_rgpMachineStates != nullptr);
+  assert(stateFrom != nullptr);
+  assert(stateTo != nullptr);
+  assert(stateFrom->index < _numStates);
+  assert(stateTo->index < _numStates);
+
+  _pFsm->add_timed_transition(stateFrom, stateTo, interval, on_transition);
 }
 
-StateType Machine::getCurrentState() const {
+MachineState* Machine::getCurrentState() const {
   if (_pFsm == nullptr) {
-    return States::error;
+    return nullptr;
   }
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
 
-  StateType state;
-  State *pCurState = _pFsm->get_current_state();
+  MachineState* state = nullptr;
+  MachineState* pCurState = (MachineState*)_pFsm->get_current_state();
   if (pCurState == nullptr) {
-    state = States::error;
+    state = nullptr;
   } else {
-    for (state = 0; state < _numStates; state++) {
-      if (_rgpStates[state] == pCurState) {
+    for (uint16_t i = 0; i < _numStates; i++) {
+      if (_rgpMachineStates[i] == pCurState) {
+        state = _rgpMachineStates[i];
         break;
       }
     }
   }
-  assert(state < _numStates);
+  assert(state->index < _numStates);
   return state;
 }
 
 bool Machine::begin() {
   //Log.traceln(F("Machine::begin()"));
-
-  assert(States::error + 1 == _stateStrings.getNumStrings());
-
-  _rgpStates = nullptr;
-  _pFsm = nullptr;
+  assert(_pFsm == nullptr);
+  assert(_rgpMachineStates == nullptr);
 
   // this code block illustrates a typical `begin()` implementation
-  // allocateFsm(States::error, Triggers::None);
-
-  _rgpStates[error] = new State(
+  MachineState* startState = defineState(
+      &error, F("error"),
       []() {
         TRACE_STATE_FN(Machine, on_enter, true);
       },
@@ -121,14 +121,14 @@ bool Machine::begin() {
         TRACE_STATE_FN(Machine, on_exit, true);
       });
 
-  setStartState(error);
+  setStartState(startState);
 
   return true;
 }
 
 void Machine::runSubMachines() {
   //Log.traceln(F("Machine::runSubMachines()"));
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
 
   // Trigger an outstanding trigger if there is one
@@ -151,7 +151,7 @@ void Machine::runSubMachines() {
 }
 
 void Machine::setTrigger(TriggerType trigger) {
-  assert(_rgpStates != nullptr);
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
   //Log.traceln(F("Machine::setTrigger(%S)"), _triggerStrings.getString(trigger));
   // Trigger a state transition (asynchronously)
@@ -160,16 +160,16 @@ void Machine::setTrigger(TriggerType trigger) {
   _trigger = trigger;
 }
 
-void Machine::stateChanged(StateType state) {
-  assert(_rgpStates != nullptr);
+void Machine::stateChanged(MachineState* state) {
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
   // For diagnostics
 
   // TODO: Redraw dispay
 }
 
-TriggerType Machine::process(StateType stateCalling) {
-  assert(_rgpStates != nullptr);
+TriggerType Machine::process(MachineState* stateCalling) {
+  assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
 
   //Log.traceln(F("Machine::process(%S)"), _stateStrings.getString(stateCalling));
@@ -180,6 +180,6 @@ TriggerType Machine::process(StateType stateCalling) {
   return trigger;
 }
 
-size_t Machine::printTo(Print &p) const {
-  return p.print(_stateStrings.getString(getCurrentState()));
+size_t Machine::printTo(Print& p) const {
+  return p.print(getCurrentState()->name);
 };

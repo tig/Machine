@@ -8,23 +8,33 @@
 bool Beaker::begin() {
   Log.traceln(F("Beaker::begin()"));
 
-  // Allocate
-  allocateFsm(Beaker::States::three, Beaker::Triggers::Beer);
+  DEFINE_STATE(error), 
+  []() {
+    TRACE_STATE_FN(Beaker, on_enter, true);
+    Log.traceln(F("Hello %S"), this_state);
+  },
+  []() {
+    TRACE_STATE_STATE_FN(Beaker, false);
+  },
+  []() {
+    TRACE_STATE_FN(Beaker, on_exit, true);
+  });
 
-  for (StateType i = Beaker::States::error; i <= Beaker::States::three; i++) {
-    _rgpStates[i] = new State(
-        []() {
-          TRACE_STATE_FN(Beaker, on_enter, true);
-        },
-        []() {
-          TRACE_STATE_STATE_FN(Beaker, false);
-        },
-        []() {
-          TRACE_STATE_FN(Beaker, on_exit, true);
-        });
-  }
-  // Set initial state
-  setStartState(three);
+  DEFINE_STATE(zero),
+  []() {
+    TRACE_STATE_FN(Beaker, on_enter, true);
+  },
+  []() {
+    TRACE_STATE_STATE_FN(Beaker, false);
+  },
+  []() {
+    TRACE_STATE_FN(Beaker, on_exit, true);
+  });
+
+  setStartState(&error);
+
+  addTransition(&error, &zero, Triggers::Juice);
+  addTransition(&zero, &error, Triggers::Beer);
 
   return true;
 }
@@ -45,7 +55,7 @@ void Beaker::runSubMachines() {
   // returning from here puts us back in loop()...
 }
 
-TriggerType Beaker::process(StateType stateCalling) {
+TriggerType Beaker::process(MachineState* stateCalling) {
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set trigger or call setTrigger(); the calling on_state will do so
   TriggerType trigger = Triggers::None;
