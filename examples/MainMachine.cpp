@@ -11,14 +11,12 @@ bool MainMachine::configStateMachine() {
   MachineState* startState = defineState(&error, F("error"),
       []() {  // on_enter
         TRACE_STATE_FN(MainMachine, on_enter, true);
-        MainMachine_inst.stateChanged(this_state);
         Log.traceln(F("Hello %p"), this_state);
 #if 0
       MainMachine::getInstance().door.reset();
       MainMachine::getInstance().slider.stop();
-      //MainMachine::getInstance().logStatus("In Error State");
 #endif
-      },
+  },
       []() {  // on_state
         TRACE_STATE_FN(MainMachine, on_exit, false);      
 
@@ -28,25 +26,24 @@ bool MainMachine::configStateMachine() {
         }
       MainMachine::getInstance().api.resetCurrentCommand();
 #endif
-      },
+  },
       []() {  // on_exit
         TRACE_STATE_FN(MainMachine, on_exit, true);      
         MainMachine::getInstance().logStatus("Error State Cleared");
-      });
+  });
 
   
   defineState(&startup, F("startup"),
       []() {                               // on_enter
         TRACE_STATE_FN(MainMachine, on_enter, true);
-        // MainMachine::getInstance().stateChanged(this_state);
-      },
+  },
       []() {                               // on_state
         TRACE_STATE_FN(MainMachine, on_exit, true);      
         // MainMachine system = MainMachine::getInstance();
         // Log.traceln("on_state: startup - currentState = %S, _trigger = %S", system._stateStrings.getString(system.getCurrentState()),
         //  system._triggerStrings.getString(system._trigger));  // TODO: PROGMEM string
         // if (system.systemFunctional) {
-        //   switch (system.process((StateType)MainMachine::States::startup)) {
+        //   switch (system.on_state((StateType)MainMachine::States::startup)) {
         //     //system.logStatus("on_state: startup");
         //     case MainMachine::Triggers::Transitioning:
         //       //system.logStatus("on_state: Transitioning");
@@ -67,10 +64,10 @@ bool MainMachine::configStateMachine() {
         //       break;
         //   }
         // }
-      },
+  },
       []() {                              // on_exit
         TRACE_STATE_FN(MainMachine, on_exit, true);      
-      });
+  });
 
   
 //   // A startup state
@@ -78,7 +75,7 @@ bool MainMachine::configStateMachine() {
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: transitioning"));
 //         // MainMachine::getInstance().stateChanged(MainMachine::States::transitioning);
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 //       switch (MainMachine::getInstance().api.currentCommand) {
@@ -95,17 +92,17 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: transitioning"));
-//       });
+//  });
 
   
 //   defineState(F("retracted"),
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: retracted"));
 //         // MainMachine::getInstance().stateChanged(this_state);
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 //       switch (MainMachine::getInstance().api.currentCommand) {
@@ -118,17 +115,17 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: retracted"));
-//       });
+//  });
 
   
 //   defineState(F("deployed"),
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: deployed"));
 //         // MainMachine::getInstance().stateChanged(this_state);
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 //       switch (MainMachine::getInstance().api.currentCommand) {
@@ -141,10 +138,10 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: deployed"));
-//       });
+//  });
 
   
 //   defineState(F("deploy_opening"),
@@ -154,7 +151,7 @@ bool MainMachine::configStateMachine() {
 // #if 0
 //       MainMachine::getInstance().door.open();
 // #endif
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 //      //Log.traceln(F("on_state: deploy_opening"));
@@ -162,7 +159,7 @@ bool MainMachine::configStateMachine() {
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
 //       } else {
 
-//         switch (MainMachine::getInstance().door.process((StateType)MainMachine::States::deploy_opening)) {
+//         switch (MainMachine::getInstance().door.on_state((StateType)MainMachine::States::deploy_opening)) {
 //           case Door::States::opened:
 //             // Door Open
 //             Log.traceln(F("   state_deploy_opening - MainMachine::Triggers::DoorOpened"));
@@ -185,13 +182,13 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: deploy_opening"));
 // #if 0
 //         MainMachine::getInstance().door.reset();
 // #endif
-//       });
+//  });
 
   
 //   defineState(F("deploy_closing"),
@@ -202,13 +199,13 @@ bool MainMachine::configStateMachine() {
 
 //       MainMachine::getInstance().door.close();
 // #endif
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 //       if (MainMachine::getInstance().api.currentCommand == Api::Commands::Abort) {
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
 //       } else {
-//         switch (MainMachine::getInstance().door.process()) {
+//         switch (MainMachine::getInstance().door.on_state()) {
 //           case Door::States::Closed:
 //             // Door Open
 //             Log.traceln(F("   state_deploy_closing - MainMachine::Triggers::DoorClosed"));
@@ -231,13 +228,13 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: deploy_closing"));
 // #if 0
 //       MainMachine::getInstance().door.reset();
 // #endif
-//       });
+//  });
 
   
 //   defineState(F("retract_opening"),
@@ -248,14 +245,14 @@ bool MainMachine::configStateMachine() {
 
 //       MainMachine::getInstance().door.open();
 // #endif
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 
 //       if (MainMachine::getInstance().api.currentCommand == Api::Commands::Abort) {
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
 //       } else {
-//         switch (MainMachine::getInstance().door.process()) {
+//         switch (MainMachine::getInstance().door.on_state()) {
 //           case Door::States::opened:
 //             // Door Open
 //             Log.traceln(F("   state_retract_opening - MainMachine::Triggers::DoorOpened"));
@@ -278,14 +275,14 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: retract_opening"));
 // #if 0
       
 //       MainMachine::getInstance().door.reset();
 // #endif
-//       });
+//  });
 
   
 //   defineState(F("retract_closing"),
@@ -296,14 +293,14 @@ bool MainMachine::configStateMachine() {
 
 //       MainMachine::getInstance().door.close();
 // #endif
-//       },
+//  },
 //       []() {  // on_state
 // #if 0
 
 //       if (MainMachine::getInstance().api.currentCommand == Api::Commands::Abort) {
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
 //       } else {
-//         switch (MainMachine::getInstance().door.process()) {
+//         switch (MainMachine::getInstance().door.on_state()) {
 //           case Door::States::Closed:
 //             // Door Open
 //             Log.traceln(F("   state_retract_closing - MainMachine::Triggers::DoorClosed"));
@@ -326,13 +323,13 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: retract_closing"));
 // #if 0
 // MainMachine::getInstance().door.reset();
 // #endif
-//       });
+//  });
 
   
 //   defineState(F("slider_deploying"),
@@ -342,17 +339,17 @@ bool MainMachine::configStateMachine() {
 // #if 0
 //       MainMachine::getInstance().slider.deploy();
 // #endif
-//       },
+//  },
 //       []() {  // on_state
 //               // slider.get_Status does all the speed up/slow down stuff
 // #if 0
 
 //       if (MainMachine::getInstance().api.isCurrentCommand((char*)"abort")) {  // Abort
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
-//       } else if (MainMachine::getInstance().door.process() != Door::States::opened) {  // Error
+//       } else if (MainMachine::getInstance().door.on_state() != Door::States::opened) {  // Error
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::DoorNotOpen);
 //       } else {
-//         switch (MainMachine::getInstance().slider.process()) {
+//         switch (MainMachine::getInstance().slider.on_state()) {
 //           case Slider::SliderStatus::Stuck:
 //             // Error
 //             MainMachine::getInstance().setTrigger(MainMachine::Triggers::SliderStuck);
@@ -372,13 +369,13 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: slider_deploying"));
 // #if 0
 //       MainMachine::getInstance().slider.stop();
 // #endif
-//       });
+//  });
 
   
 //   defineState(F("slider_retracting"),
@@ -389,17 +386,17 @@ bool MainMachine::configStateMachine() {
 
 //       MainMachine::getInstance().slider.retract();
 // #endif
-//       },
+//  },
 //       []() {
 //   // slider.get_Status does all the speed up/slow down stuff
 // #if 0
 
 //       if (MainMachine::getInstance().api.isCurrentCommand((char*)"abort")) {  // Abort
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::Abort);
-//       } else if (MainMachine::getInstance().door.process() != Door::States::opened) {  // Error
+//       } else if (MainMachine::getInstance().door.on_state() != Door::States::opened) {  // Error
 //         MainMachine::getInstance().setTrigger(MainMachine::Triggers::DoorNotOpen);
 //       } else {
-//         switch (MainMachine::getInstance().slider.process()) {
+//         switch (MainMachine::getInstance().slider.on_state()) {
 //           case Slider::SliderStatus::Stuck:
 //             // Error
 //             MainMachine::getInstance().setTrigger(MainMachine::Triggers::SliderStuck);
@@ -419,13 +416,13 @@ bool MainMachine::configStateMachine() {
 //       }
 //       MainMachine::getInstance().api.resetCurrentCommand();
 // #endif
-//       },
+//  },
 //       []() {  // on_exit
 //         Log.traceln(F("on_exit: slider_retracting"));
 // #if 0
 //       MainMachine::getInstance().slider.stop();
 // #endif
-//       });
+//  });
 
   setStartState(startState);
 
@@ -579,14 +576,14 @@ void MainMachine::runSubMachines() {
   // returning from here puts us back in loop()...
 }
 
-TriggerType MainMachine::process(MachineState* stateCalling) {
-  Log.traceln(F("MainMachine::process(%p)"), stateCalling);
+TriggerType MainMachine::on_state() {
+  Log.traceln(F("MainMachine::on_state(%p)"), stateCalling);
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set _trigger or call setTrigger(); the calling on_state will do so
   //TriggerType trigger = (TriggerType)Triggers::None;
 
 #if 0
-  //    Log.traceln(F("MainMachine::process()"));
+  //    Log.traceln(F("MainMachine::on_state()"));
   switch (slider.getStatus()) {
     case Slider::SliderStatus::Deployed:
       trigger = Triggers::Deployed;
@@ -621,7 +618,7 @@ TriggerType MainMachine::process(MachineState* stateCalling) {
     trigger = Triggers::Error;
   }
 #endif
-  //logStatus("MainMachine::process()");
+  //logStatus("MainMachine::on_state()");
 
   return Triggers::Retracted;
   //return trigger;

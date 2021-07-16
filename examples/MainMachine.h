@@ -55,8 +55,7 @@ class MainMachine : public Machine {
   virtual bool begin();
   virtual void runSubMachines();
   //virtual void setTrigger(TriggerType trigger);
-  //virtual void stateChanged(MachineState* state);
-  virtual TriggerType process(MachineState* stateCalling = nullptr);
+  virtual TriggerType on_state();
   //virtual size_t printTo(Print& p) const;
   /***************** END From Machine() ****************/
 

@@ -55,7 +55,7 @@ void Beaker::runSubMachines() {
   // returning from here puts us back in loop()...
 }
 
-TriggerType Beaker::process(MachineState* stateCalling) {
+TriggerType Beaker::on_state() {
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set trigger or call setTrigger(); the calling on_state will do so
   TriggerType trigger = Triggers::None;

@@ -36,7 +36,7 @@ void Machine::trigger(TriggerType trigger, bool immediate) {
   //Log.traceln(F("Machine::trigger(%d, %d)"), trigger, immediate);
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-//  assert(trigger < _numTriggers);
+  //assert(isTriggerValid(trigger));
   _pFsm->trigger(trigger, immediate);
 }
 
@@ -113,13 +113,13 @@ bool Machine::begin() {
       &error, F("error"),
       []() {
         TRACE_STATE_FN(Machine, on_enter, true);
-      },
+  },
       []() {
         TRACE_STATE_STATE_FN(Machine, false);
-      },
+  },
       []() {
         TRACE_STATE_FN(Machine, on_exit, true);
-      });
+  });
 
   setStartState(startState);
 
@@ -153,26 +153,18 @@ void Machine::runSubMachines() {
 void Machine::setTrigger(TriggerType trigger) {
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-  //Log.traceln(F("Machine::setTrigger(%S)"), _triggerStrings.getString(trigger));
-  // Trigger a state transition (asynchronously)
-  // TODO: Redraw dispay?
+  // if (trigger != None) {
+  //   Log.traceln(F("Machine::setTrigger(%S) - invalid trigger (current state: %p)"), _triggerStrings.getString(trigger), getCurrentState()); 
+  // }
 
   _trigger = trigger;
 }
 
-void Machine::stateChanged(MachineState* state) {
-  assert(_rgpMachineStates != nullptr);
-  assert(_pFsm != nullptr);
-  // For diagnostics
-
-  // TODO: Redraw dispay
-}
-
-TriggerType Machine::process(MachineState* stateCalling) {
+TriggerType Machine::on_state() {
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
 
-  //Log.traceln(F("Machine::process(%S)"), _stateStrings.getString(stateCalling));
+  //Log.traceln(F("Machine::on_state(%S)"), _stateStrings.getString(stateCalling));
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set trigger or call setTrigger(); the calling on_state will do so
   TriggerType trigger = Triggers::None;

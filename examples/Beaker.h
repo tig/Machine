@@ -11,6 +11,7 @@ END_FLASH_STRING_TABLE()
 
 class Beaker : public Machine {
  public:
+  // The states this machine can be in
   MachineState error;
   MachineState zero;
   MachineState one;
@@ -30,8 +31,7 @@ class Beaker : public Machine {
   virtual bool begin();
   virtual void runSubMachines();
   //virtual void setTrigger(TriggerType trigger);
-  //virtual void stateChanged(MachineState* state);
-  virtual TriggerType process(MachineState* stateCalling = nullptr);
+  virtual TriggerType on_state();
   //virtual size_t printTo(Print& p) const;
   /***************** END From Machine() ****************/
 

@@ -11,6 +11,45 @@ BEGIN_FLASH_STRING_TABLE_CLASS(MachineTriggers)
 ADD_FLASH_STRING("None")
 END_FLASH_STRING_TABLE()
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
+/**
+ * @brief Shortcut for ensuring a on_enter function can be setup/traced easily. 
+ * e.g. TRACE_STATE_FN(MainMachine, true);
+ * 
+ * These local vars are defined 
+ *  machine_inst - instance of the Machine based class
+ *  machine_state - current state
+ * 
+ * @param machine classname of the `Machine` subclass.
+ * @param trace if `true` Log.traceln will be called 
+ */
+#define TRACE_STATE_ENTER_FN(machine, trace)                         \
+  machine& machine##_inst = machine::getInstance();                  \
+  MachineState* this##_state = machine##_inst.getCurrentState();     \
+  if (trace) {                                                       \
+    Log.traceln(F(#machine " state: %p  - on_enter"), this##_state); \
+  }
+
+/**
+ * @brief Shortcut for ensuring a on_state function can be setup/traced easily. 
+ * e.g. TRACE_STATE_STATE_FN(MainMachine, true);
+ * 
+ * These local vars are defined 
+ *  machine_inst - instance of the Machine based class
+ *  machine_state - current state
+ *  machine_trigger - trigger suggested by calling machine_inst.on_state()
+ * 
+ * @param machine classname of the `Machine` subclass.
+ * @param trace if `true` Log.traceln will be called 
+ */
+#define TRACE_STATE_STATE_FN(machine, trace)                                                             \
+  machine& machine##_inst = machine::getInstance();                                                      \
+  MachineState* this##_state = machine##_inst.getCurrentState();                                         \
+  if (trace) {                                                                                           \
+    Log.traceln(F("  " #machine " state: %p  - on_state"), this##_state);                                     \
+  }                                                                                                      \
+  TriggerType this##_trigger = machine##_inst.on_state();                                                 
 /**
  * @brief Shortcut for ensuring a on_enter/state/exit function can be setup/traced easily
  * e.g. TRACE_STATE_FN(MainMachine, on_enter, true);
@@ -23,55 +62,18 @@ END_FLASH_STRING_TABLE()
  * @param fn on_enter, on_state, or on_exit
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_FN(machine, fn, trace)                                \
-  machine& machine##_inst = machine::getInstance();                       \
-  MachineState* this##_state = machine##_inst.getCurrentState();       \
-  if (trace) {                                                            \
-    Log.traceln(F(#machine " state: %S  - " #fn), this##_state->name); \
+#define TRACE_STATE_FN(machine, fn, trace)                       \
+  machine& machine##_inst = machine::getInstance();              \
+  MachineState* this##_state = machine##_inst.getCurrentState(); \
+  if (trace) {                                                   \
+    Log.traceln(F("  " #machine " state: %p  - " #fn), this##_state); \
   }
 
 /**
- * @brief Shortcut for ensuring a on_enter function can be setup/traced easily. Includes calling stateChanged().
- * e.g. TRACE_STATE_FN(MainMachine, true);
+ * @brief shortcut for calling `defineState()`; puts `state` in 
+ * flash memory.
  * 
- * These local vars are defined 
- *  machine_inst - instance of the Machine based class
- *  machine_state - current state
- * 
- * @param machine classname of the `Machine` subclass.
- * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_ENTER_FN(machine, trace)                                  \
-  machine& machine##_inst = machine::getInstance();                           \
-  MachineState* this##_state = machine##_inst.getCurrentState();           \
-  if (trace) {                                                                \
-    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name); \
-  }
-
-/**
- * @brief Shortcut for ensuring a on_state function can be setup/traced easily. Includes calling stateChanged().
- * e.g. TRACE_STATE_STATE_FN(MainMachine, true);
- * 
- * These local vars are defined 
- *  machine_inst - instance of the Machine based class
- *  machine_state - current state
- *  machine_trigger - trigger suggested by calling machine_inst.process()
- * 
- * @param machine classname of the `Machine` subclass.
- * @param trace if `true` Log.traceln will be called 
- */
-#define TRACE_STATE_STATE_FN(machine, trace)                                                             \
-  machine& machine##_inst = machine::getInstance();                                                      \
-  MachineState* this##_state = machine##_inst.getCurrentState();                                      \
-  if (trace) {                                                                                           \
-    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name);                            \
-  }                                                                                                      \
-  TriggerType this##_trigger = machine##_inst.process();                                              \
-  if (!machine##_inst.isTriggerValid(this##_trigger)) {                                               \
-    Log.traceln(F(#machine " state: %S  - on_enter"), this##_state->name);                            \
-    Log.traceln(F(" invalid trigger: %S"), machine##_inst._triggerStrings.getString(this##_trigger)); \
-  }
-
 #define DEFINE_STATE(state) defineState(&state, F("" #state "")
 
 // Because c/c++ does not support polymorhpic enums we can't really pass our nice
@@ -93,6 +95,7 @@ using TriggerType = uint16_t;
 
 class MachineState : public State, public Printable {
  public:
+  // The states this machine can be in
   MachineState(uint16_t index, const __FlashStringHelper* name,
       void (*on_enter)(), void (*on_state)(), void (*on_exit)()) : MachineState() {
     index = index;
@@ -258,21 +261,12 @@ class Machine : public Printable {
   virtual void setTrigger(TriggerType trigger);
 
   /**
-   * @brief Indicates that the state has changed.
-   * Used for diagnostics; called from on_enter of each state in statemachine
-   *
-   * @param state
-   */
-  virtual void stateChanged(MachineState* pstate);
-
-  /**
    * @brief Do machine work while in a state (to be called from `on_state` handlers).
    * 
-   * @param stateCalling - passed as a convenience so on_state doesn't have to call getState().
-   * @return Trigger - a trigger for a state transition. The `on_state` will then use this to
+   * @return a trigger for a state transition. The `on_state` will then use this to
    * initate a state transition (by calling the appropriate `setTrigger()`)
    */
-  virtual TriggerType process(MachineState* stateCalling = nullptr);
+  virtual TriggerType on_state();
 
   /**
    * @brief `Printable::printTo` - prints the current State & Trigger
