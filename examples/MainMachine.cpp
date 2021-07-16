@@ -577,7 +577,7 @@ void MainMachine::runSubMachines() {
 }
 
 TriggerType MainMachine::on_state() {
-  Log.traceln(F("MainMachine::on_state(%p)"), stateCalling);
+  Log.traceln(F("MainMachine::on_state()"));
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set _trigger or call setTrigger(); the calling on_state will do so
   //TriggerType trigger = (TriggerType)Triggers::None;
