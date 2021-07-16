@@ -1,0 +1,32 @@
+{
+  "name": "Machine",
+  "version": "0.1.0",
+  "description": "State Machine",
+  "keywords": "state,state machine, finite state machine, fsm, machine, async, multitasking, kindel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tig/Machine.git"
+  },
+  "authors": [
+    {
+      "name": "Charlie Kindel",
+      "email": "tig@kindel.com",
+      "url": "https://www.kindel.com",
+      "maintainer": true
+    }
+  ],
+  "examples": [
+    {
+      "name": "sample",
+      "base": "examples",
+      "files": [
+        "main.cpp"
+      ]
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/tig/Machine.git",
+  "dependencies": {},
+  "frameworks": "*",
+  "platforms": "*"
+}
