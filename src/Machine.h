@@ -18,17 +18,17 @@ END_FLASH_STRING_TABLE()
  * e.g. TRACE_STATE_FN(MainMachine, true);
  * 
  * These local vars are defined 
- *  machine_inst - instance of the Machine based class
+ *  machine.- instance of the Machine based class
  *  machine_state - current state
  * 
- * @param machine classname of the `Machine` subclass.
+ * @param classname classname of the `Machine` subclass.
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_ENTER_FN(machine, trace)                         \
-  machine& machine##_inst = machine::getInstance();                  \
-  MachineState* this##_state = machine##_inst.getCurrentState();     \
-  if (trace) {                                                       \
-    Log.traceln(F(#machine " state: %p  - on_enter"), this##_state); \
+#define TRACE_STATE_ENTER_FN(classname, trace)                          \
+  classname& machine = classname::getInstance();                           \
+  MachineState* machine_state = machine.getCurrentState();            \
+  if (trace) {                                                      \
+    Log.traceln(F(#classname " state: %p  - on_enter"), machine_state); \
   }
 
 /**
@@ -36,37 +36,37 @@ END_FLASH_STRING_TABLE()
  * e.g. TRACE_STATE_STATE_FN(MainMachine, true);
  * 
  * These local vars are defined 
- *  machine_inst - instance of the Machine based class
+ *  machine.- instance of the Machine based class
  *  machine_state - current state
- *  machine_trigger - trigger suggested by calling machine_inst.on_state()
+ *  machine_trigger - trigger suggested by calling machine.on_state()
  * 
- * @param machine classname of the `Machine` subclass.
+ * @param classname classname of the `Machine` subclass.
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_STATE_FN(machine, trace)                                                             \
-  machine& machine##_inst = machine::getInstance();                                                      \
-  MachineState* this##_state = machine##_inst.getCurrentState();                                         \
-  if (trace) {                                                                                           \
-    Log.traceln(F("  " #machine " state: %p  - on_state"), this##_state);                                     \
-  }                                                                                                      \
-  TriggerType this##_trigger = machine##_inst.on_state();                                                 
+#define TRACE_STATE_STATE_FN(classname, trace)                               \
+  classname& machine = classname::getInstance();                           \
+  MachineState* machine_state = machine.getCurrentState();                 \
+  if (trace) {                                                           \
+    Log.traceln(F("  " #classname " state: %p  - on_state"), machine_state); \
+  }                                                                      \
+  TriggerType machine##_trigger = machine.on_state();
 /**
  * @brief Shortcut for ensuring a on_enter/state/exit function can be setup/traced easily
  * e.g. TRACE_STATE_FN(MainMachine, on_enter, true);
  * 
  * These local vars are defined 
- *  machine_inst - instance of the Machine based class
+ *  machine.- instance of the Machine based class
  *  machine_state - current state
  * 
- * @param machine classname of the `Machine` subclass.
+ * @param classname classname of the `Machine` subclass.
  * @param fn on_enter, on_state, or on_exit
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_FN(machine, fn, trace)                       \
-  machine& machine##_inst = machine::getInstance();              \
-  MachineState* this##_state = machine##_inst.getCurrentState(); \
-  if (trace) {                                                   \
-    Log.traceln(F("  " #machine " state: %p  - " #fn), this##_state); \
+#define TRACE_STATE_FN(classname, fn, trace)                             \
+  classname& machine = classname::getInstance();                           \
+  MachineState* machine_state = machine.getCurrentState();             \
+  if (trace) {                                                       \
+    Log.traceln(F("  " #classname " state: %p  - " #fn), machine_state); \
   }
 
 /**
@@ -149,6 +149,16 @@ class Machine : public Printable {
   StringTable _triggerStrings = _progmem_MachineTriggers;
 
   /**************** BEGIN Fsm Wrappers *****/
+
+  /**
+   * @brief Enables testing if defineState has been called to allocate states.
+   * 
+   * @return true yes
+   * @return false no
+   */
+  bool isFsmInitialized() {
+    return _pFsm != nullptr;
+  }
 
   MachineState* defineState(MachineState* state, const __FlashStringHelper* name,
       void (*on_enter)(),

@@ -11,7 +11,7 @@ bool MainMachine::configStateMachine() {
   MachineState* startState = defineState(&error, F("error"),
       []() {  // on_enter
         TRACE_STATE_FN(MainMachine, on_enter, true);
-        Log.traceln(F("Hello %p"), this_state);
+        Log.traceln(F("Hello %p"), machine_state);
 #if 0
       MainMachine::getInstance().door.reset();
       MainMachine::getInstance().slider.stop();
@@ -44,19 +44,19 @@ bool MainMachine::configStateMachine() {
         //  system._triggerStrings.getString(system._trigger));  // TODO: PROGMEM string
         // if (system.systemFunctional) {
         //   switch (system.on_state((StateType)MainMachine::States::startup)) {
-        //     //system.logStatus("on_state: startup");
+        //     //Log.noticeln("on_state: startup");
         //     case MainMachine::Triggers::Transitioning:
-        //       //system.logStatus("on_state: Transitioning");
+        //       //Log.noticeln("on_state: Transitioning");
         //       system.setTrigger(MainMachine::Triggers::Transitioning);
         //       break;
 
         //     case MainMachine::Triggers::Retracted:
-        //       //system.logStatus("on_state: Retracted");
+        //       //Log.noticeln("on_state: Retracted");
         //       system.setTrigger(MainMachine::Triggers::Retracted);
         //       break;
 
         //     case MainMachine::Triggers::Deployed:
-        //       //system.logStatus("on_state: Deployed");
+        //       //Log.noticeln("on_state: Deployed");
         //       system.setTrigger(MainMachine::Triggers::Deployed);
         //       break;
 
@@ -101,7 +101,7 @@ bool MainMachine::configStateMachine() {
 //   defineState(F("retracted"),
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: retracted"));
-//         // MainMachine::getInstance().stateChanged(this_state);
+//         // MainMachine::getInstance().stateChanged(machine_state);
 //  },
 //       []() {  // on_state
 // #if 0
@@ -124,7 +124,7 @@ bool MainMachine::configStateMachine() {
 //   defineState(F("deployed"),
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: deployed"));
-//         // MainMachine::getInstance().stateChanged(this_state);
+//         // MainMachine::getInstance().stateChanged(machine_state);
 //  },
 //       []() {  // on_state
 // #if 0
@@ -147,7 +147,7 @@ bool MainMachine::configStateMachine() {
 //   defineState(F("deploy_opening"),
 //       []() {  // on_enter
 //         Log.traceln(F("on_enter: deploy_opening"));
-//         // MainMachine::getInstance().stateChanged(this_state);
+//         // MainMachine::getInstance().stateChanged(machine_state);
 // #if 0
 //       MainMachine::getInstance().door.open();
 // #endif

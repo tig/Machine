@@ -11,7 +11,7 @@ bool Beaker::begin() {
   DEFINE_STATE(error), 
   []() {
     TRACE_STATE_FN(Beaker, on_enter, true);
-    Log.traceln(F("Hello %S"), this_state);
+    Log.traceln(F("Hello %S"), machine_state);
   },
   []() {
     TRACE_STATE_STATE_FN(Beaker, false);

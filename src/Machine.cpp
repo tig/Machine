@@ -21,7 +21,7 @@ MachineState* Machine::defineState(MachineState* pms, const __FlashStringHelper*
 }
 
 void Machine::setStartState(MachineState* state) {
-  Log.traceln(F("Machine::setStartState(%p)"), state);
+  //Log.traceln(F("Machine::setStartState(%p)"), state);
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm == nullptr);
   assert(state->index < _numStates);
@@ -41,8 +41,9 @@ void Machine::trigger(TriggerType trigger, bool immediate) {
 }
 
 bool Machine::isTriggerValid(TriggerType trigger) {
-  assert(_rgpMachineStates != nullptr);
-  assert(_pFsm != nullptr);
+  if (_pFsm == nullptr || _rgpMachineStates == nullptr) return false;
+  // assert(_rgpMachineStates != nullptr);
+  // assert(_pFsm != nullptr);
   if (trigger == Triggers::None) {
     return true;
   }
@@ -173,5 +174,5 @@ TriggerType Machine::on_state() {
 }
 
 size_t Machine::printTo(Print& p) const {
-  return p.print(getCurrentState()->name);
+  return p.print(_pFsm != nullptr ? getCurrentState()->name : F("<errr>"));
 };
