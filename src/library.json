@@ -25,7 +25,7 @@
     }
   ],
   "license": "MIT",
-  "homepage": "https://github.com/tig/Machine.git",
+  "homepage": "https://github.com/tig/Machine",
   "dependencies": {},
   "frameworks": "*",
   "platforms": "*"
