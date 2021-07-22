@@ -1,6 +1,8 @@
 [submodule "lib/arduino-fsm"]
 	path = lib/arduino-fsm
 	url = tig:tig/arduino-fsm
+	branch = master
 [submodule "lib/FlashStringTable"]
 	path = lib/FlashStringTable
 	url = tig:tig/FlashStringTable
+	branch = main
