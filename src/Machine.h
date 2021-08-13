@@ -156,7 +156,7 @@ class Machine : public Printable {
    * @return true yes
    * @return false no
    */
-  bool isFsmInitialized() {
+  bool isFsmInitialized() const {
     return _pFsm != nullptr;
   }
 
@@ -237,7 +237,7 @@ class Machine : public Printable {
 
   /**
    * returns current state (helpful if the same handler is used to drive many similar states)
-   * @return index of current state
+   * @return Current state
    */
   MachineState* getCurrentState() const;
 
@@ -271,10 +271,18 @@ class Machine : public Printable {
   virtual void setTrigger(TriggerType trigger);
 
   /**
-   * @brief Do machine work while in a state (to be called from `on_state` handlers).
+   * @brief on_state gets called from the active state when loop() happens. It is called
+   * before any code in the on_state lambda is run and is used to do any generic analysis
+   * that would apply to any state. 
    * 
-   * @return a trigger for a state transition. The `on_state` will then use this to
-   * initate a state transition (by calling the appropriate `setTrigger()`)
+   * Return new state transition trigger (or None).
+   * 
+   * State specific logic should not go here; put that in the on_state lambda instead.
+   * 
+   * Avoid calling setTrigger(); the calling on_state lambda will do that.
+   * 
+   * @return TriggerType - the suggested Trigger based on whatever analysis was performed.
+   * The `on_state` will then use this to initate a state transition (by calling the appropriate `setTrigger()`
    */
   virtual TriggerType on_state();
 

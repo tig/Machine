@@ -83,6 +83,7 @@ void Machine::addTimedTransition(MachineState* stateFrom, MachineState* stateTo,
 }
 
 MachineState* Machine::getCurrentState() const {
+  assert(_pFsm != nullptr);
   if (_pFsm == nullptr) {
     return nullptr;
   }
@@ -90,16 +91,12 @@ MachineState* Machine::getCurrentState() const {
 
   MachineState* state = nullptr;
   MachineState* pCurState = (MachineState*)_pFsm->get_current_state();
-  if (pCurState == nullptr) {
-    state = nullptr;
-  } else {
-    for (uint16_t i = 0; i < _numStates; i++) {
-      if (_rgpMachineStates[i] == pCurState) {
-        state = _rgpMachineStates[i];
-        break;
-      }
+  for (uint16_t i = 0; i < _numStates; i++) {
+    if (_rgpMachineStates[i] == pCurState) {
+      state = _rgpMachineStates[i];
+      break;
     }
-  }
+    }
   assert(state->index < _numStates);
   return state;
 }
@@ -161,6 +158,20 @@ void Machine::setTrigger(TriggerType trigger) {
   _trigger = trigger;
 }
 
+  /**
+   * @brief on_state gets called from the active state when loop() happens. It is called
+   * before any code in the on_state lambda is run and is used to do any generic analysis
+   * that would apply to any state. 
+   * 
+   * Return new state transition trigger (or None).
+   * 
+   * State specific logic should not go here; put that in the on_state lambda instead.
+   * 
+   * Avoid calling setTrigger(); the calling on_state lambda will do that.
+   * 
+   * @return TriggerType - the suggested Trigger based on whatever analysis was performed.
+   * The `on_state` will then use this to initate a state transition (by calling the appropriate `setTrigger()`
+   */
 TriggerType Machine::on_state() {
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
@@ -174,5 +185,5 @@ TriggerType Machine::on_state() {
 }
 
 size_t Machine::printTo(Print& p) const {
-  return p.print(_pFsm != nullptr ? getCurrentState()->name : F("<errr>"));
+  return p.print(isFsmInitialized() ? getCurrentState()->name : F("<err>"));
 };
