@@ -1,5 +1,11 @@
 #pragma once
 
+#include <functional>
+#include <vector>
+#include <map>
+#include <string>
+using namespace std;
+
 #include <FlashStringTable.h>
 #include <Fsm.h>
 
@@ -15,25 +21,23 @@ END_FLASH_STRING_TABLE()
 
 /**
  * @brief Shortcut for ensuring a on_enter function can be setup/traced easily. 
- * e.g. TRACE_STATE_FN(MainMachine, true);
+ * e.g. STATE_ONENTER_FN(MainMachine);
  * 
  * These local vars are defined 
  *  machine.- instance of the Machine based class
  *  machine_state - current state
  * 
  * @param classname classname of the `Machine` subclass.
- * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_ENTER_FN(classname, trace)                          \
-  classname& machine = classname::getInstance();                           \
-  MachineState* machine_state = machine.getCurrentState();            \
-  if (trace) {                                                      \
-    Log.traceln(F(#classname " state: %p  - on_enter"), machine_state); \
-  }
+#define STATE_ONENTER_FN(classname)                        \
+  classname& machine = classname::getInstance();           \
+  MachineState* machine_state = machine.getCurrentState(); \
+  machine.setDirty(true);                                                   \
+  machine.notifyStateChange();
 
 /**
  * @brief Shortcut for ensuring a on_state function can be setup/traced easily. 
- * e.g. TRACE_STATE_STATE_FN(MainMachine, true);
+ * e.g. STATE_ONSTATE_FN(MainMachine, true);
  * 
  * These local vars are defined 
  *  machine.- instance of the Machine based class
@@ -43,16 +47,17 @@ END_FLASH_STRING_TABLE()
  * @param classname classname of the `Machine` subclass.
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_STATE_FN(classname, trace)                               \
-  classname& machine = classname::getInstance();                           \
-  MachineState* machine_state = machine.getCurrentState();                 \
-  if (trace) {                                                           \
+#define STATE_ONSTATE_FN(classname, trace)                                   \
+  classname& machine = classname::getInstance();                             \
+  MachineState* machine_state = machine.getCurrentState();                   \
+  if (trace) {                                                               \
     Log.traceln(F("  " #classname " state: %p  - on_state"), machine_state); \
-  }                                                                      \
+  }                                                                          \
   TriggerType machine##_trigger = machine.on_state();
+
 /**
  * @brief Shortcut for ensuring a on_enter/state/exit function can be setup/traced easily
- * e.g. TRACE_STATE_FN(MainMachine, on_enter, true);
+ * e.g. STATE_ONEXIT_FN(MainMachine, on_enter, true);
  * 
  * These local vars are defined 
  *  machine.- instance of the Machine based class
@@ -62,11 +67,11 @@ END_FLASH_STRING_TABLE()
  * @param fn on_enter, on_state, or on_exit
  * @param trace if `true` Log.traceln will be called 
  */
-#define TRACE_STATE_FN(classname, fn, trace)                             \
-  classname& machine = classname::getInstance();                           \
-  MachineState* machine_state = machine.getCurrentState();             \
-  if (trace) {                                                       \
-    Log.traceln(F("  " #classname " state: %p  - " #fn), machine_state); \
+#define STATE_ONEXIT_FN(classname, trace)                                   \
+  classname& machine = classname::getInstance();                            \
+  MachineState* machine_state = machine.getCurrentState();                  \
+  if (trace) {                                                              \
+    Log.traceln(F("  " #classname " state: %p  - on_exit"), machine_state); \
   }
 
 /**
@@ -188,9 +193,12 @@ class Machine : public Printable {
   bool isTriggerValid(TriggerType trigger);
 
   /**
-   * iterate one run-cycle of the state machine
+   * @brief Runs the state machine. Called from the holding
+   * object's `runSubMachines()`; the top level machine (`System`)'s
+   * `runMachine` is called from `loop()`.
+   *
    */
-  void runMachine();
+  virtual void runMachine();
 
   /**
    * @brief Adds a transition
@@ -255,14 +263,6 @@ class Machine : public Printable {
   virtual bool begin();
 
   /**
-   * @brief Runs the sub-system's state machine. Called from the holding
-   * object's `runSubMachines()`; the top level machine (`System`)'s
-   * `runMachine` is called from `loop()`.
-   *
-   */
-  virtual void runSubMachines();
-
-  /**
    * @brief Set the Trigger objectSets the trigger of the next state to transition to. 
    * The trigger will happen async. Trigger::None means stay in current state.
    * 
@@ -301,6 +301,42 @@ class Machine : public Printable {
    */
   TriggerType _trigger = 0;
 
+  /**
+   * @brief name of the statemachine.
+   * 
+   */
+  const __FlashStringHelper* name() const { return (_name != nullptr) ? _name : F(""); }
+  void setName(const __FlashStringHelper* n) { _name = n; }
+
+  /**
+   * @brief registers a callback function that will be called whenever a new state is
+   * entered.
+   * 
+   * @param func 
+   */
+  void registerStateChange(void (*const func)(Machine& machine)) {
+    _notifyCallbacks.emplace_back(func);
+  }
+
+  void notifyStateChange() {
+    for (const auto& cb : _notifyCallbacks)
+      cb(*this);
+  }
+
+  /**
+   * @brief Set to true when there is a reason for the state machine to 
+   * run.
+   * 
+   * @param dirty 
+   */
+  void setDirty(bool dirty) { _dirty = dirty; }
+
+  /**
+   * @brief Indicates that the state machine has processing that needs to be done.
+   * 
+   */
+  bool dirty() { return _dirty; }
+
  private:
   /**
    * @brief Dynamically allocated array of pointers to MachineStates
@@ -319,10 +355,11 @@ class Machine : public Printable {
    * 
    */
   Fsm* _pFsm = nullptr;
-
- private:
+  std::vector<std::function<void(Machine& machine)>> _notifyCallbacks;
+  const __FlashStringHelper* _name;
   uint16_t _numStates = 0;
   uint16_t _numTriggers = Triggers::None + 1;
+  bool _dirty = true;
 
   // =======================================================
   // Singleton support
@@ -343,7 +380,7 @@ class Machine : public Printable {
   // actually abstract and we only ...
   // TODO: Fix this bs.
  public:
-  Machine() {
+  Machine() : _name(nullptr) {
     // Don't do anything in here because these objects are static
     // and thus constructors are called before Serial or other
     // stuff is available, making debugging hard. Use begin() instead.

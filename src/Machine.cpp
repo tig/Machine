@@ -30,13 +30,17 @@ void Machine::setStartState(MachineState* state) {
     assert(_rgpMachineStates[i] != nullptr);
   }
   _pFsm = new Fsm(state);
+  setDirty(true);
 };
 
 void Machine::trigger(TriggerType trigger, bool immediate) {
-  //Log.traceln(F("Machine::trigger(%d, %d)"), trigger, immediate);
+  Log.traceln(F("[%S]::trigger(%S, %T) - dirty = %T"), name(), _triggerStrings.getString(trigger), immediate, dirty());
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
   //assert(isTriggerValid(trigger));
+  if (!immediate) {
+    setDirty(true);
+  }
   _pFsm->trigger(trigger, immediate);
 }
 
@@ -51,10 +55,34 @@ bool Machine::isTriggerValid(TriggerType trigger) {
 }
 
 void Machine::runMachine() {
-  //Log.traceln(F("Machine::runMachine()"));
+  //Log.traceln(F("[%S]::runMachine() - dirty = %T, trigger = %S"), name(), dirty(), _triggerStrings.getString(_trigger));
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-  _pFsm->run_machine();
+
+  // Trigger an outstanding trigger if there is one
+  if (_trigger != Machine::Triggers::None) {
+    // trigger() ends up callilng old->on_exit, new->on_enter
+    //Log.traceln(F("[%S]::runMachine - _trigger = %S"), name(), _triggerStrings.getString(_trigger));
+    trigger(_trigger, true);
+    // Reset the trigger
+    //Log.traceln(F("Machine::runMachine - trigger(%S) completed, resetting trigger and exiting..."), _triggerStrings.getString(_trigger));
+    setTrigger(Machine::Triggers::None);
+    return;
+  }
+
+  if (dirty()) {
+    // runs the current state's on_state then checks for
+    // timed transitions
+    _pFsm->run_machine();
+    // the current state's on_state has returned
+    setDirty(false);
+
+    // if, during run_machine() setTrigger was called with a valid trigger, ensure dirty is set
+    if (_pFsm->is_valid_event(_trigger)) {
+      setDirty(true);
+    }
+  }
+  // returning from here puts us back in loop()...
 }
 
 void Machine::addTransition(MachineState* stateFrom, MachineState* stateTo, TriggerType trigger, void (*on_transition)()) {
@@ -68,6 +96,7 @@ void Machine::addTransition(MachineState* stateFrom, MachineState* stateTo, Trig
   //assert(trigger < _numTriggers);
 
   _pFsm->add_transition(stateFrom, stateTo, trigger, on_transition);
+  setDirty(true);
 }
 
 void Machine::addTimedTransition(MachineState* stateFrom, MachineState* stateTo, unsigned long interval, void (*on_transition)()) {
@@ -80,6 +109,7 @@ void Machine::addTimedTransition(MachineState* stateFrom, MachineState* stateTo,
   assert(stateTo->index < _numStates);
 
   _pFsm->add_timed_transition(stateFrom, stateTo, interval, on_transition);
+  setDirty(true);
 }
 
 MachineState* Machine::getCurrentState() const {
@@ -96,7 +126,7 @@ MachineState* Machine::getCurrentState() const {
       state = _rgpMachineStates[i];
       break;
     }
-    }
+  }
   assert(state->index < _numStates);
   return state;
 }
@@ -110,55 +140,31 @@ bool Machine::begin() {
   MachineState* startState = defineState(
       &error, F("error"),
       []() {
-        TRACE_STATE_FN(Machine, on_enter, true);
-  },
+        STATE_ONENTER_FN(Machine);
+      },
       []() {
-        TRACE_STATE_STATE_FN(Machine, false);
-  },
+        STATE_ONSTATE_FN(Machine, false);
+      },
       []() {
-        TRACE_STATE_FN(Machine, on_exit, true);
-  });
+        STATE_ONEXIT_FN(Machine, false);
+      });
 
   setStartState(startState);
 
   return true;
 }
 
-void Machine::runSubMachines() {
-  //Log.traceln(F("Machine::runSubMachines()"));
-  assert(_rgpMachineStates != nullptr);
-  assert(_pFsm != nullptr);
-
-  // Trigger an outstanding trigger if there is one
-  if (_trigger != Machine::Triggers::None) {
-    // trigger() ends up callilng old->on_exit, new->on_enter
-    //Log.traceln(F("Machine::runSubMachines - trigger(%S)"), _triggerStrings.getString(_trigger));
-    trigger(_trigger, true);
-    // Reset the trigger
-    //Log.traceln(F("Machine::runSubMachines - trigger(%S) completed, resetting trigger and exiting..."), _triggerStrings.getString(_trigger));
-    setTrigger(Machine::Triggers::None);
-    return;
-  }
-
-  // runs the current state's on_state then checks for
-  // timed transitions
-  runMachine();
-
-  // the current state's on_state has returned
-  // returning from here puts us back in loop()...
-}
-
 void Machine::setTrigger(TriggerType trigger) {
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
-  // if (trigger != None) {
-  //   Log.traceln(F("Machine::setTrigger(%S) - invalid trigger (current state: %p)"), _triggerStrings.getString(trigger), getCurrentState()); 
-  // }
-
+  if (trigger != None) {
+    //Log.traceln(F("[%S]::setTrigger(%S) current state: %p"), name(), _triggerStrings.getString(trigger), getCurrentState());
+  }
+  setDirty(true);
   _trigger = trigger;
 }
 
-  /**
+/**
    * @brief on_state gets called from the active state when loop() happens. It is called
    * before any code in the on_state lambda is run and is used to do any generic analysis
    * that would apply to any state. 
@@ -180,10 +186,10 @@ TriggerType Machine::on_state() {
   // Handle work (from on_state). Return new state transition trigger (or None)
   // DO NOT set trigger or call setTrigger(); the calling on_state will do so
   TriggerType trigger = Triggers::None;
-
-  return trigger;
 }
 
 size_t Machine::printTo(Print& p) const {
-  return p.print(isFsmInitialized() ? getCurrentState()->name : F("<err>"));
+  size_t n = p.print(name());
+  n += p.print(F(" = "));
+  return n + p.print(isFsmInitialized() ? getCurrentState()->name : F("<err>"));
 };

@@ -28,7 +28,7 @@ bool MainMachine::configStateMachine() {
 #endif
   },
       []() {  // on_exit
-        TRACE_STATE_FN(MainMachine, on_exit, true);      
+        TRACE_STATE_FN(MainMachine, on_exit, false);      
         MainMachine::getInstance().logStatus("Error State Cleared");
   });
 
@@ -38,7 +38,7 @@ bool MainMachine::configStateMachine() {
         TRACE_STATE_FN(MainMachine, on_enter, true);
   },
       []() {                               // on_state
-        TRACE_STATE_FN(MainMachine, on_exit, true);      
+        TRACE_STATE_FN(MainMachine, on_exit, false);      
         // MainMachine system = MainMachine::getInstance();
         // Log.traceln("on_state: startup - currentState = %S, _trigger = %S", system._stateStrings.getString(system.getCurrentState()),
         //  system._triggerStrings.getString(system._trigger));  // TODO: PROGMEM string
@@ -66,7 +66,7 @@ bool MainMachine::configStateMachine() {
         // }
   },
       []() {                              // on_exit
-        TRACE_STATE_FN(MainMachine, on_exit, true);      
+        TRACE_STATE_FN(MainMachine, on_exit, false);      
   });
 
   

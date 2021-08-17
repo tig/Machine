@@ -10,25 +10,25 @@ bool Beaker::begin() {
 
   DEFINE_STATE(error), 
   []() {
-    TRACE_STATE_FN(Beaker, on_enter, true);
+    STATE_ONEXIT_FN(Beaker, on_enter, true);
     Log.traceln(F("Hello %S"), machine_state);
   },
   []() {
-    TRACE_STATE_STATE_FN(Beaker, false);
+    STATE_ONSTATE_FN(Beaker, false);
   },
   []() {
-    TRACE_STATE_FN(Beaker, on_exit, true);
+    STATE_ONEXIT_FN(Beaker, on_exit, false);
   });
 
   DEFINE_STATE(zero),
   []() {
-    TRACE_STATE_FN(Beaker, on_enter, true);
+    STATE_ONEXIT_FN(Beaker, on_enter, true);
   },
   []() {
-    TRACE_STATE_STATE_FN(Beaker, false);
+    STATE_ONSTATE_FN(Beaker, false);
   },
   []() {
-    TRACE_STATE_FN(Beaker, on_exit, true);
+    STATE_ONEXIT_FN(Beaker, on_exit, false);
   });
 
   setStartState(&error);
