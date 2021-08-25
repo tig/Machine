@@ -165,6 +165,8 @@ class Machine : public Printable {
     return _pFsm != nullptr;
   }
 
+  void reset();
+
   MachineState* defineState(MachineState* state, const __FlashStringHelper* name,
       void (*on_enter)(),
       void (*on_state)(),
@@ -220,11 +222,11 @@ class Machine : public Printable {
    */
   void addTimedTransition(MachineState* stateFrom, MachineState* stateTo, unsigned long interval, void (*on_transition)() = nullptr);
 
-  // /**
-  //  * looks for the current state's timed transitions to the target state and resets the timer
-  //  * @param stateTo target state to reset the timed transition for. If None reset all current state timers
-  //  */
-  // void resetTimedTransition(StateType stateTo);
+  /**
+   * looks for the current state's timed transitions to the target state and resets the timer
+   * @param stateTo target state to reset the timed transition for. If None reset all current state timers
+   */
+  void resetTimedTransition(MachineState* stateTo);
 
   /**
    * returns current state (helpful if the same handler is used to drive many similar states)

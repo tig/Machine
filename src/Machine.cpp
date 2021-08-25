@@ -4,6 +4,22 @@
 
 #include "Machine.h"
 
+void Machine::reset() {
+  // if (_rgpMachineStates != nullptr) {
+  //   free(_rgpMachineStates);
+  //   _rgpMachineStates = nullptr;
+  // }
+  //_numStates = 0;
+
+  if (_pFsm != nullptr) {
+    delete _pFsm;
+    _pFsm = nullptr;
+  }
+  //_notifyCallbacks.clear();
+  //uint16_t _numTriggers = Triggers::None + 1;
+  _dirty = true;  
+}
+
 MachineState* Machine::defineState(MachineState* pms, const __FlashStringHelper* name,
     void (*on_enter)(),
     void (*on_state)(),
@@ -112,6 +128,17 @@ void Machine::addTimedTransition(MachineState* stateFrom, MachineState* stateTo,
   setDirty(true);
 }
 
+void Machine::resetTimedTransition(MachineState* stateTo) {
+  //Log.traceln(F("Machine::addTimedTransition(%p, %p, %d)"), stateFrom, stateTo, interval);
+  assert(_pFsm != nullptr);
+  assert(_rgpMachineStates != nullptr);
+  assert(stateTo != nullptr);
+  assert(stateTo->index < _numStates);
+
+  _pFsm->reset_timed_transition(stateTo);
+  setDirty(true);
+}
+
 MachineState* Machine::getCurrentState() const {
   assert(_pFsm != nullptr);
   if (_pFsm == nullptr) {
@@ -158,9 +185,11 @@ void Machine::setTrigger(TriggerType trigger) {
   assert(_rgpMachineStates != nullptr);
   assert(_pFsm != nullptr);
   if (trigger != None) {
-    //Log.traceln(F("[%S]::setTrigger(%S) current state: %p"), name(), _triggerStrings.getString(trigger), getCurrentState());
+    Log.traceln(F("[%S]::setTrigger(%S) current state: %p"), name(), _triggerStrings.getString(trigger), getCurrentState());
   }
-  setDirty(true);
+  if (isTriggerValid(trigger)) {
+    setDirty(true);
+  }
   _trigger = trigger;
 }
 
